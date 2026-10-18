@@ -1,0 +1,174 @@
+{
+  "schema": "banknet-1",
+  "version": "4.0.0",
+  "runtime": "Offline JavaScript, float32 arrays, Web Workers; no external runtime libraries",
+  "tableSizes": {
+    "min": 2,
+    "max": 12
+  },
+  "roundLengths": [
+    10,
+    15,
+    20
+  ],
+  "parameterCount": 14402,
+  "architecture": {
+    "opponentEncoder": [
+      24,
+      32,
+      32
+    ],
+    "activation": "tanh",
+    "pooling": [
+      "sum / sqrt(opponentCount)",
+      "mean",
+      "max"
+    ],
+    "globalFeatures": 32,
+    "pooledWidth": 128,
+    "trunk": [
+      128,
+      64,
+      64
+    ],
+    "head": [
+      64,
+      2
+    ],
+    "outputActivation": "sigmoid",
+    "outputs": [
+      "bankPolicyPreference",
+      "sampledTrainingPolicyWinShare"
+    ],
+    "actionSelection": "bankPolicyPreference >= 0.5, except exact overrides"
+  },
+  "globals": [
+    "asinh(pot/100)/4",
+    "remainingRounds/20",
+    "totalRounds/20",
+    "round/20",
+    "playerCount/12",
+    "activeFraction",
+    "safePhase",
+    "asinh(rollCount)/4",
+    "normalizedOwnScore",
+    "normalizedHighestRivalGap",
+    "normalizedPotMinusStrictLeadTarget",
+    "ownActive",
+    "nextBustProbability",
+    "doublesProbability",
+    "strictLeadReachLower",
+    "strictLeadReachUpper",
+    "strictLeadReachExact",
+    "tieTargetReachLower",
+    "tieTargetReachUpper",
+    "nextDangerRollStrictLeadProbability",
+    "bankingWouldStrictlyLead",
+    "rivalsAheadFraction",
+    "activeRivalsAheadFraction",
+    "pendingFraction",
+    "lastBankExists",
+    "rankFraction",
+    "winShareIfBustNow",
+    "normalizedHighestBankedRivalGap",
+    "finalRound",
+    "lastActive",
+    "tiedWithHighestRival",
+    "highestRivalTieFraction"
+  ],
+  "opponentFeatures": [
+    "normalizedScoreGap",
+    "active",
+    "normalizedBankedThisRound",
+    "pending",
+    "lastBankActor",
+    "relativeSeatDistance",
+    "reachAheadOfRivalLower",
+    "reachAheadOfRivalUpper",
+    "sameCurrentScore",
+    "normalizedPotentialScoreGap",
+    "log1p(modelObservations)/6",
+    "smoothedBankRate",
+    "meanNormalizedBankPot",
+    "stdNormalizedBankPot",
+    "normalizedLastBankPot",
+    "posteriorFixed",
+    "posteriorAdaptive",
+    "posteriorChaser",
+    "posteriorReactive",
+    "posteriorMatcher",
+    "posteriorStrategic",
+    "posteriorNoisy",
+    "posteriorExpectedLogBase/8",
+    "posteriorEntropy/log(77)"
+  ],
+  "exactFeatures": {
+    "targetRecurrence": "h(p) = [6*h(2p) + sum(count[s]*h(p+s))]/36, h(p>=target)=1; bust contribution is zero",
+    "nonDoubleSums": [
+      3,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11
+    ],
+    "counts": [
+      2,
+      2,
+      4,
+      4,
+      4,
+      4,
+      2,
+      2
+    ],
+    "exactTargetLimit": 2048,
+    "largerTargets": "Integer grid lower/upper bounds, approximately 512 cells",
+    "cacheEntries": 96,
+    "scoreArithmetic": "Safe integer Number, then BigInt promotion",
+    "ruleOverrides": [
+      "Final-round last-active optimal stopping",
+      "Two-player strict-lead preservation by public bank matching",
+      "Final-round strict-lead shadowing with one active rival"
+    ]
+  },
+  "training": {
+    "algorithm": "PPO actor-critic with shared encoder",
+    "reward": "Terminal first place 1, k-way tie 1/k, otherwise 0",
+    "gamma": 1,
+    "gaeLambda": 0.95,
+    "clip": 0.2,
+    "entropyCoefficient": 0.01,
+    "valueLoss": "0.25*(value-return)^2",
+    "optimizer": "Adam",
+    "learningRate": 0.0003,
+    "gradientNormClip": 0.5,
+    "batchSize": 32,
+    "uiEpochs": 2,
+    "earlyStop": "Minibatch mean oldLogProbability-newLogProbability over non-forced actions > 0.04",
+    "warmStartUpdates": 3,
+    "warmStart": "Heuristic imitation, 5% random-action branch",
+    "laterImitationCoefficient": "0.02 * max(0, 1-updates/100)",
+    "exactActionTreatment": "Masked PPO/entropy; value and auxiliary teacher learning retained",
+    "selfPlay": "50% all current network; remaining mixed current, scripted, saved networks",
+    "syntheticMidgameFraction": 0.2,
+    "snapshotInterval": 10,
+    "maxSnapshots": 4,
+    "parallelism": "One learner; remaining selected workers collect full games using frozen batch weights; max six workers total",
+    "checkpoint": "Weights, Adam moments/step, league, config, last evaluation in IndexedDB"
+  },
+  "evaluation": {
+    "games": [
+      33,
+      132,
+      660
+    ],
+    "cells": "11 player counts x 3 round lengths",
+    "opponents": "Fresh seeds and lineups from training scripted families",
+    "reference": "Existing heuristic fallback, paired seed/opponent lineup",
+    "notIncluded": "Full old-engine tournament, human validation, statistical strength proof"
+  },
+  "status": "Experimental. Untrained by default. Demonstration checkpoint is optional and insufficient to establish strength."
+}

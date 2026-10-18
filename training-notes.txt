@@ -1,0 +1,28 @@
+Bank Pilot v4.0 — on-device neural training
+
+Getting started
+Upload the app files together to GitHub Pages. Open the HTTPS page once while online, wait for it to finish loading, and add it to your Home Screen. After the first successful cache, training and play need no network, server, account, or PC. Keep the app in the foreground during training.
+
+Open Train, choose a player range and session duration, then start. Sessions can run for 5–3,600 seconds. Start with 60 seconds. Settings controls the worker count, up to six; one worker also works. More workers may help simulation throughput, but actual iPhone performance and thermal limits have not been measured. Training pauses when the page goes into the background. The last completed update is retained; an interrupted rollout or update is discarded.
+
+After training, use Evaluate, then select Neural (experimental) under the advice engine in Settings. Monte Carlo remains the default. The neural adviser chooses the higher-probability action, subject to exact rule overrides. Its BANK/CONTINUE percentages are policy preferences, not the chance of winning if each action is taken. Its value estimate describes win share under sampled training play and is uncalibrated. Use the Monte Carlo check for a separate search of the current position.
+
+What learns
+The 14,402-weight float32 network shares an opponent encoder across 1–11 rivals. Sum/sqrt(count), mean and max pooling combine rival embeddings with public global features. Seat distance is included because public bank responses can depend on decision order. Inputs include scores, active players, pending decisions, last bank, remaining rounds, bank history and posterior weights over seven opponent families. These beliefs use public observed decisions only.
+
+Exact dice calculations supply target-reaching probabilities and immediate-roll success probabilities. Target probabilities are exact through 2,048 points; larger targets use lower and upper bounds, not a claimed exact probability. Targets are relative to rivals' current scores; those rivals can still gain points. Exact final-round solo decisions and lead-preservation rules override the neural policy. Lead-preservation guarantees depend on the app's public response window: remaining players can match a bank before another roll.
+
+Training begins with three imitation updates from the existing score/table-aware heuristic. Later updates use PPO actor-critic training with terminal first-place reward, splitting ties equally. Training mixes all-current self-play, current learners against saved network snapshots, and varied scripted opponents. The scripts include fixed thresholds, score-aware, chasing, reactive, matching, random and photo-style play. Snapshots are retained every ten updates, up to four. Twenty percent of episodes start at varied synthetic midgame scores to broaden coverage; the rest start full games. Training samples the selected 2–12 player range and 10/15/20 rounds. Network changes are synchronized between rollout batches.
+
+Evaluation and limits
+Evaluation always covers all player counts 2–12 and 10/15/20 rounds, regardless of the training-range selection. It uses fresh seeds, rotates the neural seat, and compares against a heuristic reference using paired dice seeds and opponent lineups. The evaluation scripts are the same families used in training, with fresh games. This is not an independent test against all old Monte Carlo engines, unseen humans or all possible strategies. A 33-game result is only a smoke test; even 660 games spread across 33 conditions can be noisy. Evaluation never automatically promotes a model. The displayed update number identifies which checkpoint was evaluated.
+
+The app starts with an untrained network. No neural model here is proven optimal or proven stronger than Monte Carlo. A finite network and finite training cannot guarantee optimal play across every possible opponent strategy or unbounded score. The simulator promotes scores to BigInt when required; network features remain approximate compressed inputs. Training return estimates, opponent beliefs and neural values are approximate even where dice features or action rules are exact.
+
+Checkpoints
+Completed updates automatically save the model, Adam optimizer, opponent snapshots and session settings on this device. Export a checkpoint for a backup, especially before deleting site data or changing the hosting URL. Import restores compatible weights and optimizer state. Reset affects neural training, not game scores. Browser storage can be cleared by the user or operating system.
+
+Included validation
+The validation/demo-checkpoint.json file is an optional demonstration checkpoint, not an endorsed strong model. It contains only 48 training episodes and 12 updates. Importing it is optional; it is never loaded automatically. validation/training-validation.json records its run and 33 exploratory evaluation games. That sample cannot establish superiority.
+
+Automated checks covered neural gradients, game rules, exact/bounded probabilities, large scores, variable table sizes, worker training, checkpoint import/export, offline reload and training, and viewport fit in Chromium. Physical iPhone Safari was not available for testing. Build-machine Node inference was about 0.04 ms per cached state; this is not an iPhone speed measurement. tests/browser.py requires Python Playwright for development checks only; the app has no external runtime dependencies. The source, specification and validation scripts are included for further simulation and tuning.
