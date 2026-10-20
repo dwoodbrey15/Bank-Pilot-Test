@@ -1,0 +1,59 @@
+Relative goal strategy, BANK Pilot v4.4
+
+This new adviser is a heuristic for winning five-player, 20-round games. It keeps the existing solo strategy and all multiplayer search features. Select Settings > Advice engine > Relative goal. Solo mode still follows its original fixed 2,335 target. Other group sizes can use Relative goal, but this tuning and comparison use five players only.
+
+The multiplayer rule
+
+Let R be rounds left, including the current round. Let L be the highest current banked total among rivals, and S your banked total. Let M[k] be the optimal solo median for k complete fresh rounds. Set the temporary final-score goal to ceil(L + 1 + 0.4*M[R-1]). Look up the optimal fixed-goal solo action for R rounds, a shortfall of goal minus S, and the current pot. Recompute after each state change, including another player banking. A met temporary goal leads to BANK.
+
+For example, if your score is 2,400 and a banked rival has 4,000 in the final round, the old solo policy has already met its 2,335 target and will bank even a small pot. The new policy, if you are the last active player, continues until a pot of at least 1,601 can put you strictly ahead.
+
+The 0.4 factor was selected by win share in practice games against mixtures of fixed-threshold and score-adaptive scripted opponents. It is an empirical setting, not a proven law or an estimate of every rival's scoring rate. Replanning a moving goal is a heuristic even though each fixed-goal table entry comes from exact dice enumeration.
+
+Response rules run before the goal lookup. If you strictly lead all rivals and every rival remains active, wait for a bank and reassess before the next roll. In heads-up play, bank a pot that secures a lead after the rival exits, then preserve that lead by matching future banks. In the final round, when exactly one rival remains active and your existing score already strictly leads everyone, wait and match their bank. When you are the final active player, bank once your new total is strictly above every rival, otherwise continue. With an active rival whose existing total matches or exceeds yours in the final round, wait for their decision rather than bank first into a possible match. This last rule is a robust response heuristic, not a solved multiplayer equilibrium.
+
+Remaining active players may respond to a BANK before the next roll. The simulation gives everyone another decision after every bank. That timing assumption is necessary for the matching rules. Banking does not reduce the shared pot.
+
+What is exact
+
+F[r,d] is the largest probability of earning at least d further points over r rounds from a fresh round. V[r,d,p] is that probability at a banking decision with pot p. With goal already met the value is one; with no rounds and a positive shortfall it is zero. The two action values are:
+
+BANK = F[r-1,d-p]
+ROLL = F[r-1,d]/6 + V[r,d,2p]/6 + sum(n[s]*V[r,d,p+s])/36
+
+s = 3,4,5,6,8,9,10,11
+n = 2,2,4,4,4,4,2,2
+
+V takes the maximum of BANK and ROLL. Averaging V over the exact distribution of the first three safe rolls gives F for a fresh round. Seven is worth 70 in those safe rolls, and doubles add their face sum. Afterward, seven busts and doubles multiply the existing pot by two without adding their sum. Surviving outcomes strictly increase a positive pot, so pots can be evaluated downward. Targets and score shortfalls are whole numbers; there is no coarse score grid. Calculations use float64 arithmetic, not symbolic rational arithmetic.
+
+The extended data cover every integer shortfall up to 10,000 for 1-20 remaining rounds. Nonmonotone stopping regions are stored explicitly. All 54,545,600 original decisions, including goal-met boundary pots, match the old table for targets up to 2,335. The larger table uses the same recurrence and is small enough to load locally. Larger shortfalls use a proportional scaling approximation; that branch is flagged in the app and counted by the benchmark. The final-active-player final-round rule needs no finite table and handles larger gaps directly. This adviser does not display multiplayer win percentages, because it does not calculate them.
+
+Why 2,335 in solo
+
+The original calculation independently optimized the chance of reaching each possible 20-round final-score target. The optimum success probability is 0.50019476507137 at target 2,335, but only 0.49999773961040 at 2,336. Thus 2,335 is the greatest target reachable with probability at least one half. It is an optimal median objective, not a pot threshold or a mean-score objective. The solo opening BANK threshold is 913; the new multiplayer forecast begins with a temporary goal of 886 and a goal-table BANK threshold of 60 before any rival has banked. Those opening values can change as rivals bank.
+
+Testing and reproducibility
+
+The source in benchmark/frozen.json was frozen before the held-out engine comparison. Practice comprised a first-stage grid on 600 common dice sequences per setting and a refinement on 1,200 fresh sequences per setting, across six scripted fields. The older preliminary tuning used the original smaller table and is retained as exploratory work. Selection maximized the new player's own win share in the refinement, choosing the simpler rule when results tied.
+
+The separate scripted-opponent holdout uses 12,000 fresh five-player games with the new policy, unchanged solo policy, and three human-like scripts at each table. New win share was 35.8208%; solo was 21.0708%. Paired improvement was 14.75 percentage points with an approximate 95% interval from 13.43 to 16.07 pp. These are scripted populations, not observations of actual human players or unseen behavior families.
+
+The engine holdout uses 200 fresh five-player, 20-round games. New and unchanged solo occupy one seat each. All 20 triples of six distinct saved search implementations fill the other seats, and each triple runs two cycles of all five seat rotations. Therefore new and solo each appear in 200 games and each search version appears in 100. First-place ties split one win credit. Dice use a counter-based seeded generator with rejection to make the 36 outcomes equiprobable; a decision cannot reveal or change future dice. Search engines maintain their own opponent-learning state, reset per game. All engines observe only public choices and scores.
+
+Search uses a requested 150 ms soft wall-clock budget per decision with six concurrent game workers on the build host. Old search batches can overrun. This is a short-budget comparison, not a test of every engine at full phone think time. The results report observed decision times. v3.1-v3.3 share identical source and are represented once by v3.3. v3.4's speed-optimized implementation is retained because throughput can matter under a time budget. v3.5 also represents later apps that retained its search source. There is no supplied, fixed trained neural checkpoint, so the experimental neural training lab is not benchmarked as a trained engine.
+
+To rerun: node benchmark/bench.js heldout 2, then node benchmark/report.js heldout. This overwrites the packaged held-out result with a new time-budgeted run; clock scheduling can change search choices, so reproduce the protocol rather than expecting identical scores. Source hashes identify the tested modules. The fixed-work pilot is a development diagnostic, not the held-out result.
+
+The exact-goal builder is build-goals.cpp: compile with g++ -O3 -fopenmp and run from benchmark. It emits threshold, value and exception files; run node package-goals.js to regenerate goal-data.json from goal-thresholds.bin and goal-ranges.json. Runtime needs only goal-data.json, goal-engine.js and multiplayer-policy.js. No training, server, CDN or network is needed for advice after installation.
+
+Offline installation
+
+Upload the archive's app files to GitHub Pages with index.html at the site root. Open the HTTPS page online, reload if an update is pending, and wait for Offline ready v4.4 before disconnecting. The service worker caches both strategy tables and all other runtime files; tapping the offline badge verifies or repairs the cache. Saved games are retained under the existing keys. Source files, UI-state tests and simulated offline-cache tests are included. This update was not physically tested on an iPhone; browser QA was unavailable in this environment.
+
+Completed engine holdout
+
+New relative-goal win share was 32.0% (64/200 credits); unchanged solo was 23.0% (46/200). The old engines each appeared 100 times: v3.5 27.0%, v3.4 22.0%, v3.3 16.0%, v1 14.0%, v2 7.0%, v3 4.0%. New minus solo was +9.0 percentage points with an approximate 95% interval of -1.2 to +19.2 pp. Thus the new policy led this run, but this engine test alone does not establish superiority. Old-engine rates are conditional on their balanced subset of tables; matched subset comparisons are in the summary JSON. The larger scripted-opponent holdout gave clearer evidence for improvement against that particular scripted population.
+
+Mean observed decision times on this host were 1.84 ms for the new rule, 0.13 ms for the fast unchanged solo lookup, and 179-284 ms across the old engines despite a requested 150 ms soft budget. These are host timings under concurrent load, not iPhone measurements. The whole engine test took about 29 minutes. New-policy proportional scaling was used in 0 of 17991 decisions; other relative-goal decisions used exact table lookups or the response rules.
+
+Within the same 100 games containing v3.5, the new policy earned 29% win share against v3.5's 27%. Their paired difference interval spans about -12.7 to +16.7 pp. The 32% versus 27% overall table rates use different mixtures of opposing engines, so the matched comparison is the more direct comparison of these two policies.

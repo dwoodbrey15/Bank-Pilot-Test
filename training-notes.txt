@@ -1,7 +1,7 @@
-Bank Pilot v4.0 — on-device neural training
+Bank Pilot v4.0.1 — on-device neural training
 
 Getting started
-Upload the app files together to GitHub Pages. Open the HTTPS page once while online, wait for it to finish loading, and add it to your Home Screen. After the first successful cache, training and play need no network, server, account, or PC. Keep the app in the foreground during training.
+Upload the app files together to GitHub Pages. Open the HTTPS page once while online, wait for Offline ready · v4.0.1, and add it to your Home Screen. After the first successful cache, training and play need no network, server, account, or PC. Open the Home Screen icon once online and wait for Offline ready there too. Tap the status badge online to repair or retry. Keep the app in the foreground during training.
 
 Open Train, choose a player range and session duration, then start. Sessions can run for 5–3,600 seconds. Start with 60 seconds. Settings controls the worker count, up to six; one worker also works. More workers may help simulation throughput, but actual iPhone performance and thermal limits have not been measured. Training pauses when the page goes into the background. The last completed update is retained; an interrupted rollout or update is discarded.
 
@@ -26,3 +26,6 @@ Included validation
 The validation/demo-checkpoint.json file is an optional demonstration checkpoint, not an endorsed strong model. It contains only 48 training episodes and 12 updates. Importing it is optional; it is never loaded automatically. validation/training-validation.json records its run and 33 exploratory evaluation games. That sample cannot establish superiority.
 
 Automated checks covered neural gradients, game rules, exact/bounded probabilities, large scores, variable table sizes, worker training, checkpoint import/export, offline reload and training, and viewport fit in Chromium. Physical iPhone Safari was not available for testing. Build-machine Node inference was about 0.04 ms per cached state; this is not an iPhone speed measurement. tests/browser.py requires Python Playwright for development checks only; the app has no external runtime dependencies. The source, specification and validation scripts are included for further simulation and tuning.
+
+4.0.1 offline repair
+Essential app scripts are checked individually before Offline ready is shown. Optional icon failures do not cancel installation. Cache names are scoped to this app folder. Navigation uses the cached app shell, including index.html query launches. The badge can retry and repair missing files while online. Existing game and neural model storage is retained. After uploading every updated runtime file, reload Safari online until v4.0.1 appears, then open the Home Screen icon online once and wait for its Offline ready status before testing Airplane Mode.
