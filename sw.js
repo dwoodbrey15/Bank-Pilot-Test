@@ -1,4 +1,4 @@
-const VERSION='4.4.0',PREFIX='bank-pilot:'+self.registration.scope+':',CACHE=PREFIX+VERSION;
+const VERSION='4.4.1',PREFIX='bank-pilot:'+self.registration.scope+':',CACHE=PREFIX+VERSION;
 const CORE=['goal-engine.js','goal-data.json','multiplayer-policy.js','target-policy.js','solo-engine.js','solo-data.json','index.html','engine.js','neural.js','learning.js','trainer-worker.js','trainer-ui.js'],OPTIONAL=['manifest.webmanifest','icon.svg','icon-192.png','icon-512.png'];
 const url=path=>new URL(path,self.registration.scope).href;
 async function prepare(){const cache=await caches.open(CACHE);await Promise.all(CORE.map(async path=>{const response=await fetch(new Request(url(path),{cache:'reload'}));if(!response.ok)throw Error('Could not cache '+path);await cache.put(url(path),response);}));await Promise.all(OPTIONAL.map(async path=>{try{const response=await fetch(new Request(url(path),{cache:'reload'}));if(response.ok)await cache.put(url(path),response);}catch(e){}}));}

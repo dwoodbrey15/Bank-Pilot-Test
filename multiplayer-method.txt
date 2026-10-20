@@ -1,4 +1,4 @@
-Relative goal strategy, BANK Pilot v4.4
+Relative goal strategy, BANK Pilot v4.4.1
 
 This new adviser is a heuristic for winning five-player, 20-round games. It keeps the existing solo strategy and all multiplayer search features. Select Settings > Advice engine > Relative goal. Solo mode still follows its original fixed 2,335 target. Other group sizes can use Relative goal, but this tuning and comparison use five players only.
 
@@ -48,7 +48,7 @@ The exact-goal builder is build-goals.cpp: compile with g++ -O3 -fopenmp and run
 
 Offline installation
 
-Upload the archive's app files to GitHub Pages with index.html at the site root. Open the HTTPS page online, reload if an update is pending, and wait for Offline ready v4.4 before disconnecting. The service worker caches both strategy tables and all other runtime files; tapping the offline badge verifies or repairs the cache. Saved games are retained under the existing keys. Source files, UI-state tests and simulated offline-cache tests are included. This update was not physically tested on an iPhone; browser QA was unavailable in this environment.
+Upload the archive's app files to GitHub Pages with index.html at the site root. Open the HTTPS page online, reload if an update is pending, and wait for Offline ready v4.4.1 before disconnecting. The service worker caches both strategy tables and all other runtime files; tapping the offline badge verifies or repairs the cache. Saved games are retained under the existing keys. Source files, UI-state tests and simulated offline-cache tests are included. This update was not physically tested on an iPhone; browser QA was unavailable in this environment.
 
 Completed engine holdout
 
