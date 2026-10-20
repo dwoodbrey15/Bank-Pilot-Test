@@ -1,7 +1,7 @@
 {
-  "schema": "banknet-1",
-  "version": "4.0.1",
-  "runtime": "Offline JavaScript, float32 arrays, Web Workers; no external runtime libraries",
+  "schema": "banknet-2",
+  "version": "4.5",
+  "runtime": "Offline JavaScript, float32 arrays and Web Workers; no external libraries",
   "tableSizes": {
     "min": 2,
     "max": 12
@@ -11,36 +11,43 @@
     15,
     20
   ],
-  "parameterCount": 14402,
+  "parameterCount": 45316,
   "architecture": {
     "opponentEncoder": [
-      24,
       32,
-      32
+      48,
+      48
     ],
-    "activation": "tanh",
+    "globalFeatures": 44,
+    "opponentResidual": true,
+    "attentionHeads": 2,
+    "attention": "Two independent global queries (44 -> 96), tanh, scaled dot-product softmax over opponent embeddings",
     "pooling": [
-      "sum / sqrt(opponentCount)",
       "mean",
-      "max"
+      "max",
+      "attention head 1",
+      "attention head 2",
+      "active opponent mean"
     ],
-    "globalFeatures": 32,
-    "pooledWidth": 128,
+    "pooledWidth": 284,
     "trunk": [
-      128,
-      64,
-      64
+      284,
+      96,
+      96
     ],
-    "head": [
-      64,
-      2
+    "trunkResidual": true,
+    "output": [
+      96,
+      4
     ],
-    "outputActivation": "sigmoid",
     "outputs": [
       "bankPolicyPreference",
-      "sampledTrainingPolicyWinShare"
+      "trainingPolicyWinShare",
+      "sampledBankActionValue",
+      "sampledContinueActionValue"
     ],
-    "actionSelection": "bankPolicyPreference >= 0.5, except exact overrides"
+    "valuePrior": "sigmoid(logit - log(opponentCount)); zero logits give 1/playerCount",
+    "actionSelection": "BANK preference >=0.5, except exact rule overrides; action values are auxiliary only"
   },
   "globals": [
     "asinh(pot/100)/4",
@@ -66,7 +73,7 @@
     "bankingWouldStrictlyLead",
     "rivalsAheadFraction",
     "activeRivalsAheadFraction",
-    "pendingFraction",
+    "normalizedHighestActiveRivalGap",
     "lastBankExists",
     "rankFraction",
     "winShareIfBustNow",
@@ -74,15 +81,27 @@
     "finalRound",
     "lastActive",
     "tiedWithHighestRival",
-    "highestRivalTieFraction"
+    "highestRivalTieFraction",
+    "fairShareBaseline",
+    "activeRivalFraction",
+    "fractionRivalsBelowBankNowScore",
+    "winShareIfEveryoneBanksCurrentPot",
+    "normalizedPotentialLeaderGap",
+    "doublePotReachLower",
+    "doublePotReachUpper",
+    "meanNormalizedRivalGap",
+    "activeRivalsTiedOrAheadFraction",
+    "logRemainingRoundsAfterThis",
+    "lastBankIsOwnSeat",
+    "reachStrictlyAheadOfBankedRivalsLower"
   ],
   "opponentFeatures": [
     "normalizedScoreGap",
     "active",
     "normalizedBankedThisRound",
-    "pending",
+    "rivalBankWindowOpen",
     "lastBankActor",
-    "relativeSeatDistance",
+    "rivalIsCurrentHighestScore",
     "reachAheadOfRivalLower",
     "reachAheadOfRivalUpper",
     "sameCurrentScore",
@@ -100,7 +119,15 @@
     "posteriorStrategic",
     "posteriorNoisy",
     "posteriorExpectedLogBase/8",
-    "posteriorEntropy/log(77)"
+    "posteriorEntropy/log(77)",
+    "reachAheadOfRivalExact",
+    "modeledBankChanceNow",
+    "modeledBankChanceAfterDouble",
+    "modeledBankChanceStdAcrossHypotheses",
+    "bankNowWouldPassRival",
+    "ownCurrentScoreStrictlyAhead",
+    "activeRivalTiedOrAhead",
+    "observationConfidenceCappedAt30"
   ],
   "exactFeatures": {
     "targetRecurrence": "h(p) = [6*h(2p) + sum(count[s]*h(p+s))]/36, h(p>=target)=1; bust contribution is zero",
@@ -135,29 +162,29 @@
     ]
   },
   "training": {
-    "algorithm": "PPO actor-critic with shared encoder",
-    "reward": "Terminal first place 1, k-way tie 1/k, otherwise 0",
+    "algorithm": "Synchronous data-parallel PPO actor-critic with terminal-value and chosen-action-value auxiliary losses",
+    "reward": "Terminal first place 1; k-way first-place tie 1/k; otherwise 0",
     "gamma": 1,
     "gaeLambda": 0.95,
-    "clip": 0.2,
-    "entropyCoefficient": 0.01,
-    "valueLoss": "0.25*(value-return)^2",
-    "optimizer": "Adam",
-    "learningRate": 0.0003,
-    "gradientNormClip": 0.5,
-    "batchSize": 32,
-    "uiEpochs": 2,
-    "earlyStop": "Minibatch mean oldLogProbability-newLogProbability over non-forced actions > 0.04",
-    "warmStartUpdates": 3,
-    "warmStart": "Heuristic imitation, 5% random-action branch",
-    "laterImitationCoefficient": "0.02 * max(0, 1-updates/100)",
-    "exactActionTreatment": "Masked PPO/entropy; value and auxiliary teacher learning retained",
-    "selfPlay": "50% all current network; remaining mixed current, scripted, saved networks",
+    "valueTargets": "Actual terminal win shares within [0,1]; advantages use GAE; only non-forced decisions normalize advantages",
+    "policyClip": 0.2,
+    "entropyCoefficient": 0.015,
+    "valueLoss": "0.5 * binary cross entropy; chosen-action auxiliary loss 0.2 * binary cross entropy",
+    "optimizer": "Adam with gradient norm clip 0.5",
+    "learningRate": 0.0002,
+    "perWorkerBatchSize": 48,
+    "epochs": 2,
+    "earlyStop": "Positive approximate KL (ratio - 1 - logRatio), mean >0.025 over non-forced samples, before applying the step",
+    "warmStart": "Until both 8192 unique collected positions and 8 updates; imitate threshold heuristic plus 5% random branch; no full v3.5 search teacher",
+    "imitationAfterWarmup": "0.04 * max(0.1,1-(samples-8192)/200000)",
+    "selfPlay": "50% all-current-network lineups; other games mix current network, scripts and saved snapshots",
     "syntheticMidgameFraction": 0.2,
+    "syntheticStates": "Random round and score scale 10^2 to 10^8; half of synthetic games also randomize pot and active players",
     "snapshotInterval": 10,
     "maxSnapshots": 4,
-    "parallelism": "One learner; remaining selected workers collect full games using frozen batch weights; max six workers total",
-    "checkpoint": "Weights, Adam moments/step, league, config, last evaluation in IndexedDB"
+    "parallelism": "1/2/4/6 workers independently selectable; all generate frozen-policy games, then all compute gradients at identical weights. Raw gradient sums merge weighted by sample count; worker 0 applies one synchronized Adam step. No six separate models or stale-policy updates.",
+    "storageKey": "current-banknet-2; original current key for Bank Net 1 is retained",
+    "checkpoint": "Weights, counters, Adam moments, league, config, last evaluation in IndexedDB; completed batches commit atomically in app state"
   },
   "evaluation": {
     "games": [
@@ -165,10 +192,10 @@
       132,
       660
     ],
-    "cells": "11 player counts x 3 round lengths",
-    "opponents": "Fresh seeds and lineups from training scripted families",
-    "reference": "Existing heuristic fallback, paired seed/opponent lineup",
-    "notIncluded": "Full old-engine tournament, human validation, statistical strength proof"
+    "cells": "11 table sizes x 3 round lengths",
+    "reference": "Threshold heuristic, not full v3.5 engine",
+    "comparison": "Paired seeds and scripted opponent lineups; net plays deterministically with exact overrides",
+    "status": "Exploratory; not proof of strength"
   },
-  "status": "Experimental. Untrained by default. Demonstration checkpoint is optional and insufficient to establish strength."
+  "status": "Experimental and initially untrained. Capacity, mathematical and runtime tests do not establish superiority over v3.5."
 }

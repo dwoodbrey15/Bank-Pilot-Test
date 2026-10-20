@@ -1,8 +1,8 @@
-Bank Pilot v4.3 — Multiplayer plus exact Solo
+Bank Pilot v4.5 — Multiplayer plus exact Solo
 
 Upload all runtime files from this ZIP into the same GitHub Pages folder. Keep index.html, sw.js, solo-engine.js, target-policy.js, solo-data.json, engine.js, neural.js, learning.js, trainer-worker.js, trainer-ui.js, manifest.webmanifest and icons together. The tests and validation folders are optional for hosting.
 
-Open the published HTTPS page in Safari while online and reload until v4.3 appears. Wait for Offline ready · v4.3. Add to Home Screen, open that icon once online, and wait for its Offline ready status as well. Then test Airplane Mode. Tap the status badge online to retry or repair the cache. The cache includes the exact solo data and all multiplayer runtime files. Do not open index.html directly in the Files app to install it. iOS can clear website data; export important games and models as backups.
+Open the published HTTPS page in Safari while online and reload until v4.5 appears. Wait for Offline ready · v4.5. Add to Home Screen, open that icon once online, and wait for its Offline ready status as well. Then test Airplane Mode. Tap the status badge online to retry or repair the cache. The cache includes the exact solo data and all multiplayer runtime files. Do not open index.html directly in the Files app to install it. iOS can clear website data; export important games and models as backups.
 
 Choose Multiplayer or Solo · exact strategy in Settings. Each mode has its own saved game. Existing multiplayer saves migrate on the same hosting origin and folder. Switching modes preserves the other game; starting a new game affects only the current mode. Solo exports can be imported like multiplayer exports. Neural model checkpoints retain their existing separate storage.
 
